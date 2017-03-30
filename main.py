@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 import webapp2
-
+import re
 page_header = """</DOCTYPE html>
             <html>
                 <head>
@@ -77,13 +77,76 @@ main_content = """  <form method="post">
                         <input type= "submit">
                     </form>
 """
+USER_RE = re.compile("^[a-zA-Z0-9_-]{3,20}$")
+def valid_username(username):
+    return username and USER_RE.match(username)
 
-class MainHandler(webapp2.RequestHandler):
+PW_RE = re.compile("^.{3,20}$")
+def valid_password(password):
+    return password and PW_RE.match(password)
+
+#VERIFY_RE = re.compile(r"^.{3,20}$")
+#def valid_verify(verify):
+#    return VERIFY_RE.match(verify)
+
+EMAIL_RE = re.compile("^[\S]+@[\S]+.[\S]+$")
+def valid_email(email):
+    return  not email or EMAIL_RE.match(email)
+
+class Signup(webapp2.RequestHandler):
     def get(self):
-
         content = page_header + main_content + page_footer
         self.response.write(content)
 
+    def post(self):
+        have_error = False
+        username = self.request.get("username")
+        password = self.request.get("password")
+        verify = self.request.get("verify")
+        email = self.request.get("email")
+
+        if username == "":
+            self.redirect("/?error=Please enter a Username!")
+
+        if password == "":
+            self.redirect("/?error=Please enter a password!")
+
+        params = dict(username = username,
+                        email = email)
+
+        if not valid_username(username):
+            params['error_username'] = "That's not a valid username!"
+            have_error = True
+
+        if not valid_password(password):
+            params['error_password'] = "That was not a valid password!"
+            have_error = True
+        elif password != verify:
+            params['error_verify'] = "The passwords didn't match!"
+            have_error = True
+
+        if not valid_email(email):
+            params['error_email'] = "That's not a valid email!"
+            have_error = True
+
+        if have_error:
+            self.redirect('/')#, **params)
+        else:
+            self.redirect('/welcome?=username=', username)
+
+class Welcome(webapp2.RequestHandler):
+    def get(self):
+
+        username = self.request.get("username")
+
+        response = "Welcome, " + username + "!"
+        response_header = "<h1>" + response + "</h1>"
+        self.response.write(response_header)
+        #self.response.write(password)
+        #self.response.write(verify)
+        #self.response.write(email)
+
 app = webapp2.WSGIApplication([
-    ('/', MainHandler)
+    ('/', Signup),
+    ('/welcome', Welcome)
 ], debug=True)
