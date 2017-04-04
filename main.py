@@ -36,66 +36,81 @@ page_footer = """</body>
             </html>
 """
 
-main_content = """  <form method="post">
+page_body = """  <form method="post">
                         <table>
                             <tr>
+                                <td class="label">
+                                    Username
+                                </td>
                                 <td>
-                                    <label for="username">Username</label>                                        </td>
-                                <td>
-                                    <input name="username" type="text" value required>
-                                    <span class="error"></span>
+                                    <input type="text" name="username" value="{username}">
+                                </td>
+                                <td class="error">
+                                    {error_username}
                                 </td>
                             </tr>
                             <tr>
-                                <td>
-                                    <label for="password">Password</label>
+                                <td class="label">
+                                    Password
                                 </td>
                                 <td>
-                                    <input name="password" type="password" required>
-                                    <span class="error"></span>
+                                    <input type="password" name="password" value="">
                                 </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <label for="verify">Verify Password</label>
-                                </td>
-                                <td>
-                                    <input name="verify" type="password" required>
-                                    <span class="error"></span>
+                                <td class="error">
+                                    {error_password}
                                 </td>
                             </tr>
                             <tr>
-                                <td>
-                                    <label for="email">Email (Optional)</label>
+                                <td class="label">
+                                    Verify Password
                                 </td>
                                 <td>
-                                    <input name="email" type="email" value>
+                                    <input type="password" name="verify" value="">
                                     <span class="error"></span>
+                                </td>
+                                <td class="error">
+                                    {error_verify}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="label">
+                                    Email (Optional)
+                                </td>
+                                <td>
+                                    <input type="text" name="email" value="{email}">
+                                    <span class="error"></span>
+                                </td>
+                                <td class="error">
+                                    {error_email}
                                 </td>
                             </tr>
                         </table>
                         <input type= "submit">
                     </form>
 """
-USER_RE = re.compile("^[a-zA-Z0-9_-]{3,20}$")
+USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 def valid_username(username):
     return username and USER_RE.match(username)
 
-PW_RE = re.compile("^.{3,20}$")
+PW_RE = re.compile(r"^.{3,20}$")
 def valid_password(password):
     return password and PW_RE.match(password)
 
-#VERIFY_RE = re.compile(r"^.{3,20}$")
-#def valid_verify(verify):
-#    return VERIFY_RE.match(verify)
-
-EMAIL_RE = re.compile("^[\S]+@[\S]+.[\S]+$")
+EMAIL_RE = re.compile(r"^[\S]+@[\S]+.[\S]+$")
 def valid_email(email):
-    return  not email or EMAIL_RE.match(email)
+    return not email or EMAIL_RE.match(email)
 
 class Signup(webapp2.RequestHandler):
     def get(self):
-        content = page_header + main_content + page_footer
+        username = ""
+        error_username = ""
+        error_password = ""
+        error_verify = ""
+        email = ""
+        error_email = ""
+
+        new_body = page_body.format(username = username, error_username = error_username, error_password = error_password, error_verify = error_verify, email = email, error_email = error_email)
+        content = page_header + new_body + page_footer
         self.response.write(content)
 
     def post(self):
@@ -104,47 +119,55 @@ class Signup(webapp2.RequestHandler):
         password = self.request.get("password")
         verify = self.request.get("verify")
         email = self.request.get("email")
+        error_username = ""
+        error_password = ""
+        error_verify = ""
+        error_email = ""
+        #if password == "":
+        #    self.redirect("/?error=Please enter a password!")
 
         if username == "":
-            self.redirect("/?error=Please enter a Username!")
+            #self.redirect("/?error=Please enter a Username!")
+            error_username = "Please enter a Username!"
+            have_error = True
 
-        if password == "":
-            self.redirect("/?error=Please enter a password!")
-
-        params = dict(username = username,
-                        email = email)
-
-        if not valid_username(username):
-            params['error_username'] = "That's not a valid username!"
+        elif not valid_username(username):
+            error_username = "That's not a valid username!"
             have_error = True
 
         if not valid_password(password):
-            params['error_password'] = "That was not a valid password!"
+            error_password = "That was not a valid password!"
             have_error = True
+
         elif password != verify:
-            params['error_verify'] = "The passwords didn't match!"
+            error_verify = "The passwords didn't match!"
             have_error = True
 
         if not valid_email(email):
-            params['error_email'] = "That's not a valid email!"
+            error_email = "That's not a valid email!"
             have_error = True
 
         if have_error:
-            self.redirect('/')#, **params)
+            #self.redirect('/', **params)
+            new_body = page_body.format(username = username, error_username = error_username, error_password = error_password, error_verify = error_verify, email = email, error_email = error_email)
+            content = page_header + new_body + page_footer
+            self.response.write(content)
         else:
-            self.redirect('/welcome?=username=', username)
+            self.redirect('/welcome?username=' + username)
 
 class Welcome(webapp2.RequestHandler):
     def get(self):
 
-        username = self.request.get("username")
+        username = self.request.get('username')
+
+        #if valid_username == username:
+        #    self.redirect('/welcome')
+        #else:
+        #    self.redirect('/')
 
         response = "Welcome, " + username + "!"
         response_header = "<h1>" + response + "</h1>"
         self.response.write(response_header)
-        #self.response.write(password)
-        #self.response.write(verify)
-        #self.response.write(email)
 
 app = webapp2.WSGIApplication([
     ('/', Signup),
